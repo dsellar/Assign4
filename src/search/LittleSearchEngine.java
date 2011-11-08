@@ -106,6 +106,28 @@ public class LittleSearchEngine {
 	 */
 	public HashMap<String,Occurrence> loadKeyWords(String docFile) 
 	throws FileNotFoundException {
+		// check if exists
+		if (docFile == null || docFile.length() == 0) {
+			throw new FileNotFoundException("File not found on disk");
+		}
+		// map for docFile
+		HashMap<String, Occurrence> docMap = new HashMap(1000, 2.0f);
+		Occurrence occ = new Occurrence(docFile, 1);
+		// scans word
+		int beg = 0;
+		int end = 0;
+		while (beg < docFile.length()) {
+			end = docFile.indexOf(' ', beg);
+			String word = docFile.substring(beg, end);
+			if (word != null && word.length() > 0) {
+				if (docMap.get(word).document == docFile) {
+					docMap.get(word).frequency++;
+				} else {
+					docMap.put(word, occ);
+				}
+			}
+			beg = end+1;
+		}
 		// COMPLETE THIS METHOD
 		// THE FOLLOWING LINE HAS BEEN ADDED TO MAKE THE METHOD COMPILE
 		return null;
@@ -136,9 +158,26 @@ public class LittleSearchEngine {
 	 * @return Keyword (word without trailing punctuation, LOWER CASE)
 	 */
 	public String getKeyWord(String word) {
-		// COMPLETE THIS METHOD
-		// THE FOLLOWING LINE HAS BEEN ADDED TO MAKE THE METHOD COMPILE
-		return null;
+		// checks end of word until only letters remain
+		while (word.length() > 0) {
+			if (word.endsWith(".") ||
+				word.endsWith(",") ||
+				word.endsWith("?") ||
+				word.endsWith(":") ||
+				word.endsWith(";") ||
+				word.endsWith("!")) {
+				word = word.substring(0, word.length()-1);
+			}
+		}
+		// checks remaining letters for other characters
+		if (!(word.matches("^[a-zA-Z]$"))) {
+			return null;
+		}
+		// checks if noise word
+		if (noiseWords.containsKey(word.toLowerCase())) {
+			return null;
+		}
+		return word;
 	}
 	
 	/**
@@ -153,9 +192,25 @@ public class LittleSearchEngine {
 	 *         your code - it is not used elsewhere in the program.
 	 */
 	public ArrayList<Integer> insertLastOccurrence(ArrayList<Occurrence> occs) {
+		if (occs.size() == 1) {
+			return null;
+		}
+		int lo = 0, hi = occs.size()-2, spot = occs.size()-1;
+		ArrayList<Integer> pts = new ArrayList((occs.size()-1)/2);
+		while (lo < hi) {
+			int mid = (lo+hi)/2;
+			pts.add(mid);
+			if (occs.get(mid).frequency == occs.get(spot).frequency) {
+				
+			}
+			if (occs.get(mid).frequency < occs.get(spot).frequency) {
+				lo = mid + 1;
+			} else {
+				hi = mid - 1;
+			}
+		}
 		// COMPLETE THIS METHOD
-		// THE FOLLOWING LINE HAS BEEN ADDED TO MAKE THE METHOD COMPILE
-		return null;
+		return pts;
 	}
 	
 	/**
