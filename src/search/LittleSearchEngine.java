@@ -85,7 +85,6 @@ public class LittleSearchEngine {
 			String word = sc.next();
 			noiseWords.put(word,word);
 		}
-		
 		// index all keywords
 		sc = new Scanner(new File(docsFile));
 		while (sc.hasNext()) {
@@ -93,7 +92,6 @@ public class LittleSearchEngine {
 			HashMap<String,Occurrence> kws = loadKeyWords(docFile);
 			mergeKeyWords(kws);
 		}
-		
 	}
 
 	/**
@@ -111,26 +109,31 @@ public class LittleSearchEngine {
 			throw new FileNotFoundException("File not found on disk");
 		}
 		// map for docFile
-		HashMap<String, Occurrence> docMap = new HashMap(1000, 2.0f);
-		Occurrence occ = new Occurrence(docFile, 1);
-		// scans word
-		int beg = 0;
-		int end = 0;
-		while (beg < docFile.length()) {
-			end = docFile.indexOf(' ', beg);
-			String word = docFile.substring(beg, end);
-			if (word != null && word.length() > 0) {
-				if (docMap.get(word).document == docFile) {
-					docMap.get(word).frequency++;
-				} else {
-					docMap.put(word, occ);
+		HashMap<String, Occurrence> docMap = new HashMap<String, Occurrence>(500, 2.0f);
+		try {
+			// reads the docFile in
+			BufferedReader filebr = new BufferedReader(new FileReader(docFile));
+			String line = filebr.readLine();
+			while (line != null) {
+				StringTokenizer go = new StringTokenizer(line);
+				// separates and checks words
+				while (go.hasMoreTokens()) {
+					String word = go.nextToken();
+					word = getKeyWord(word);
+					if (word != null && word.length() > 0) {
+						if (docMap.containsKey(word)) {
+							docMap.get(word).frequency++;
+						} else {
+							docMap.put(word, new Occurrence(docFile, 1));
+						}
+					}
 				}
+			line = filebr.readLine();
 			}
-			beg = end+1;
+		} catch (IOException i) {
+			
 		}
-		// COMPLETE THIS METHOD
-		// THE FOLLOWING LINE HAS BEEN ADDED TO MAKE THE METHOD COMPILE
-		return null;
+		return docMap;
 	}
 	
 	/**
@@ -143,7 +146,22 @@ public class LittleSearchEngine {
 	 * @param kws Keywords hash table for a document
 	 */
 	public void mergeKeyWords(HashMap<String,Occurrence> kws) {
-		// COMPLETE THIS METHOD
+		// variables
+		Iterator<String> iter = kws.keySet().iterator();
+		ArrayList<Occurrence> al = new ArrayList<Occurrence>();
+		// goes through kws and adds into keywordsIndex
+		while (iter.hasNext()) {
+			al.clear();
+			String key = iter.next();
+			if (keywordsIndex.containsKey(key)) {
+				keywordsIndex.get(key).add(kws.get(key));
+				System.out.println(key);
+//				insertLastOccurrence(keywordsIndex.get(key));
+			} else {
+				al.add(kws.get(key));
+				keywordsIndex.put(key, al);
+			}
+		}
 	}
 	
 	/**
@@ -159,7 +177,10 @@ public class LittleSearchEngine {
 	 */
 	public String getKeyWord(String word) {
 		// checks end of word until only letters remain
-		while (word.length() > 0) {
+		word = word.toLowerCase();
+		while (word.length() > 0 && 
+				!(Character.isLetter(word.charAt(word.length()-1))) &&
+				!(Character.isDigit(word.charAt(word.length()-1)))) {
 			if (word.endsWith(".") ||
 				word.endsWith(",") ||
 				word.endsWith("?") ||
@@ -167,15 +188,19 @@ public class LittleSearchEngine {
 				word.endsWith(";") ||
 				word.endsWith("!")) {
 				word = word.substring(0, word.length()-1);
+			} else {
+				return null;
 			}
 		}
-		// checks remaining letters for other characters
-		if (!(word.matches("^[a-zA-Z]$"))) {
+		// checks if noise word
+		if (noiseWords.containsKey(word)) {
 			return null;
 		}
-		// checks if noise word
-		if (noiseWords.containsKey(word.toLowerCase())) {
-			return null;
+		// checks remaining letters for other characters
+		for (int i = 0; i < word.length(); i++) {
+			if (!(Character.isLetter(word.charAt(i)))) {
+				return null;
+			}
 		}
 		return word;
 	}
@@ -192,24 +217,23 @@ public class LittleSearchEngine {
 	 *         your code - it is not used elsewhere in the program.
 	 */
 	public ArrayList<Integer> insertLastOccurrence(ArrayList<Occurrence> occs) {
-		if (occs.size() == 1) {
-			return null;
-		}
+		ArrayList<Integer> pts = new ArrayList<Integer>();
 		int lo = 0, hi = occs.size()-2, spot = occs.size()-1;
-		ArrayList<Integer> pts = new ArrayList((occs.size()-1)/2);
-		while (lo < hi) {
+		while (lo <= hi) {
 			int mid = (lo+hi)/2;
 			pts.add(mid);
 			if (occs.get(mid).frequency == occs.get(spot).frequency) {
-				
+				occs.add(mid, occs.get(spot));
+				occs.remove(occs.size()-1);
 			}
 			if (occs.get(mid).frequency < occs.get(spot).frequency) {
-				lo = mid + 1;
+				hi = mid + 1;
 			} else {
-				hi = mid - 1;
+				lo = mid - 1;
 			}
 		}
-		// COMPLETE THIS METHOD
+		occs.add(lo, occs.get(spot));
+		occs.remove(occs.size()-1);
 		return pts;
 	}
 	
@@ -228,8 +252,67 @@ public class LittleSearchEngine {
 	 *         the result is null.
 	 */
 	public ArrayList<String> top5search(String kw1, String kw2) {
-		// COMPLETE THIS METHOD
-		// THE FOLLOWING LINE HAS BEEN ADDED TO MAKE THE METHOD COMPILE
-		return null;
+		ArrayList<String> fin = new ArrayList<String>(5);
+		// check if words are in the keywords table
+		if (keywordsIndex.get(kw1) == null && keywordsIndex.get(kw2) == null) {
+			return null;
+		} else if (keywordsIndex.get(kw1) == null && keywordsIndex.get(kw2) != null) {
+			for (int i = 0;i < 5;i++) {
+				fin.add(i, keywordsIndex.get(kw2).get(i).document);
+			}
+			return fin;
+		} else if (keywordsIndex.get(kw1) != null && keywordsIndex.get(kw2) == null) {
+			for (int i = 0;i < 5;i++) {
+				fin.add(i, keywordsIndex.get(kw1).get(i).document);
+			}
+			return fin;
+		}
+		// get AL for words
+		int i = 0, x = 0;
+		while ((fin.size() < 5) && (i < keywordsIndex.get(kw1).size()) && (x < keywordsIndex.get(kw2).size())) {
+			if (keywordsIndex.get(kw1).get(i).frequency >= keywordsIndex.get(kw2).get(x).frequency) {
+				if (check(fin, keywordsIndex.get(kw1).get(i).document)) {
+					fin.add(keywordsIndex.get(kw1).get(i).document);
+				}
+				i++;
+			} else {
+				if (check(fin, keywordsIndex.get(kw2).get(x).document)) {
+					fin.add(keywordsIndex.get(kw2).get(x).document);
+				}
+				x++;
+			}
+		}
+		// adds rest on end if needed
+		if (fin.size() < 5) {
+			if (i < keywordsIndex.get(kw1).size() && !(x < keywordsIndex.get(kw2).size())) {
+				while (fin.size() < 5 && i < keywordsIndex.get(kw1).size()) {
+					if (check(fin, keywordsIndex.get(kw1).get(i).document)) {
+						fin.add(keywordsIndex.get(kw1).get(i).document);
+					}
+					i++;
+				}
+			} else if (!(i < keywordsIndex.get(kw1).size()) && x < keywordsIndex.get(kw2).size()) {
+				while (fin.size() < 5 && x < keywordsIndex.get(kw2).size()) {
+					if (check(fin, keywordsIndex.get(kw2).get(x).document)) {
+						fin.add(keywordsIndex.get(kw2).get(x).document);
+					}
+					x++;
+				}
+			}
+		}
+		return fin;
+	}
+	
+	private boolean check(ArrayList<String> al, String docFile) {
+		// check if al is empty
+		if (al.size() == 0) {
+			return true;
+		}
+		for (int i = 0; i < al.size(); i++) {
+			if (al.get(i).equals(docFile)) {
+				return false;
+			}
+		}
+		return true;
 	}
 }
